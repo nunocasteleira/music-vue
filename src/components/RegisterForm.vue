@@ -74,6 +74,20 @@
       />
       <ErrorMessage class="text-red-600" name="confirm_password" />
     </div>
+    <!-- User Type -->
+    <div class="mb-3">
+      <label class="inline-block mb-2">User Type</label>
+      <vee-field
+        as="select"
+        name="userType"
+        class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition
+                  duration-500 focus:outline-none focus:border-black rounded"
+      >
+        <option value="Artist">Artist</option>
+        <option value="Listener">Listener</option>
+      </vee-field>
+      <ErrorMessage class="text-red-600" name="userType" />
+    </div>
     <!-- Country -->
     <div class="mb-3">
       <label class="inline-block mb-2">Country</label>
@@ -113,6 +127,8 @@
 </template>
 
 <script>
+import { auth, usersCollection } from "@/includes/firebase";
+
 export default {
   name: "RegisterForm",
   data() {
@@ -123,11 +139,13 @@ export default {
         age: "required|min_value:18|max_value:120",
         password: "required|min:3|max:32",
         confirm_password: "passwords_mismatch:@password",
+        userType: "required",
         country: "required|country_excluded:Antarctica",
         tos: "tos",
       },
       userData: {
         country: "USA",
+        userType: "Artist",
       },
       reg_in_submission: false,
       reg_show_alert: false,
@@ -136,14 +154,45 @@ export default {
     };
   },
   methods: {
-    register(values) {
+    async register(values) {
       this.reg_show_alert = true;
       this.reg_in_submission = true;
       this.reg_alert_variant = "bg-blue-500";
       this.reg_alert_message = "Please wait! Your account is being created.";
+
+      let userCred = null;
+      try {
+        userCred = await auth.createUserWithEmailAndPassword(
+          values.email,
+          values.password
+        );
+      } catch (error) {
+        this.reg_in_submission = false;
+        this.reg_alert_variant = "bg-red-500";
+        this.reg_alert_message =
+          "An unexpected error occured. Please try again later.";
+        return;
+      }
+
+      try {
+        await usersCollection.add({
+          name: values.name,
+          email: values.email,
+          age: values.age,
+          country: values.country,
+          userType: values.userType,
+        });
+      } catch (error) {
+        this.reg_in_submission = false;
+        this.reg_alert_variant = "bg-red-500";
+        this.reg_alert_message =
+          "An unexpected error occured. Please try again later.";
+        return;
+      }
+
       this.reg_alert_variant = "bg-green-500";
       this.reg_alert_message = "Success! Your account has been created";
-      console.log(values);
+      console.log(userCred);
     },
   },
 };
